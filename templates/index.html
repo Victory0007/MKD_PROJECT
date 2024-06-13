@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Query Interface</title>
+</head>
+<body>
+    <h1>Text Query Interface</h1>
+    <form method="POST">
+        <label for="query">Enter your query:</label><br>
+        <input type="text" id="query" name="query" required><br><br>
+        <input type="submit" value="Submit">
+    </form>
+    <a href="{{ url_for('image_query') }}">Go to Image Query Interface</a>
+
+    {% if query %}
+    <h2>Results for: {{ query }}</h2>
+    <table border="1">
+        <tr>
+            <th>Description</th>
+            <th>Unit Price</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.Description }}</td>
+            <td>{{ product.UnitPrice }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</body>
+</html>

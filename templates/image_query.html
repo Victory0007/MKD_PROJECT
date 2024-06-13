@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Query Interface</title>
+</head>
+<body>
+    <h1>Image Query Interface</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="file">Upload an image:</label><br>
+        <input type="file" id="file" name="file" accept="image/*" required><br><br>
+        <input type="submit" value="Submit">
+    </form>
+    <a href="{{ url_for('index') }}">Go to Text Query Interface</a>
+
+    {% if query %}
+    <h2>Results for: {{ query }}</h2>
+    <table border="1">
+        <tr>
+            <th>Description</th>
+            <th>Unit Price</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.Description }}</td>
+            <td>{{ product.UnitPrice }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</body>
+</html>
