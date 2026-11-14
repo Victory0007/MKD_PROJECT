@@ -4,7 +4,10 @@ from functools import lru_cache
 
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
+from dotenv import load_dotenv
 
+
+load_dotenv()
 
 MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "mkd-ecommerce-ds-project")
@@ -30,7 +33,9 @@ def _get_index():
 
 def similarity_search(query, top_k=5):
     """Return the closest products and their metadata for a text query."""
-    query = (query or "").strip()
+    if not isinstance(query, str):
+        raise ValueError("Search query must be a string.")
+    query = query.strip()
     if not query:
         raise ValueError("Search query cannot be empty.")
     if not 1 <= top_k <= 20:
