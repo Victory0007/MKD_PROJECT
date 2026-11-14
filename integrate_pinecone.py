@@ -9,6 +9,8 @@ from pinecone import Pinecone, ServerlessSpec
 from sentence_transformers import SentenceTransformer
 
 
+load_dotenv()
+
 MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 DEFAULT_INDEX_NAME = "mkd-ecommerce-ds-project"
 
@@ -59,7 +61,6 @@ def ensure_index(client, index_name, dimension, cloud, region):
 
 
 def main():
-    load_dotenv()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", default="data/Cleaned_Ecommerce_dataset.csv")
     parser.add_argument("--max-per-description", type=int, default=200)
