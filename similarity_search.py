@@ -1,56 +1,57 @@
-# import pandas as pd
-# from pinecone import Pinecone
-# from sentence_transformers import SentenceTransformer
-# import math
-# # Load the ecommerce dataset
-# csv_file = 'sampled_data.csv'
-# data = pd.read_csv(csv_file)
-# data.drop("Unnamed: 0", inplace=True, axis=1)
-#
-# # Define a function to create embeddings using OpenAI
-# # Load the Sentence Transformer model
-# model = SentenceTransformer('all-MiniLM-L6-v2')
-#
-# # Initialize Pinecone
-# pinecone_api_key = "bba7a9c0-eb9c-4397-9b07-2019752f54ea"
-# pc = Pinecone(api_key=pinecone_api_key)
-#
-# index_name = "mkd-ecommerce-ds-project"
-#
-# def similarity_search(index, query, top_k=5):
-#     # Encode the query using the same Sentence Transformer model
-#     query_embedding = model.encode([query]).tolist()
-#     # Perform the search in Pinecone
-#     results = index.query(vector=query_embedding, top_k=top_k, include_values=False)
-#     return results
-#
-# index = pc.Index(index_name)
-#
-# # Example usage of similarity search
-# query = "I am looking for pink bags"
-# response = similarity_search(index, query)
-#
-# # Retrieve full product details for the matches
-# matched_ids = [int(match['id'][3:]) for match in response['matches']]
-# print(len(matched_ids))
-# matched_products = data.loc[matched_ids].drop_duplicates(subset='StockCode')[["Description", "UnitPrice"]]
-#
-# # Print the search results
-# print(matched_products)
+"""Semantic product search backed by Sentence Transformers and Pinecone."""
+import os
+from functools import lru_cache
 
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
 
-# Initialize Pinecone and Sentence Transformer model
-pinecone_api_key = "YOUR-API-KEY"
-pc = Pinecone(api_key=pinecone_api_key)
-model = SentenceTransformer('all-MiniLM-L6-v2')
+
+MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "mkd-ecommerce-ds-project")
+
+
+def _required_env(name):
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
+@lru_cache(maxsize=1)
+def _get_model():
+    return SentenceTransformer(MODEL_NAME)
+
+
+@lru_cache(maxsize=1)
+def _get_index():
+    client = Pinecone(api_key=_required_env("PINECONE_API_KEY"))
+    return client.Index(INDEX_NAME)
+
 
 def similarity_search(query, top_k=5):
-    # Encode the query using the Sentence Transformer model
-    query_embedding = model.encode([query]).tolist()
-    # Perform the search in Pinecone
-    index_name = "mkd-ecommerce-ds-project"
-    index = pc.Index(index_name)
-    results = index.query(vector=query_embedding, top_k=top_k, include_values=False)
-    return results
+    """Return the closest products and their metadata for a text query."""
+    query = (query or "").strip()
+    if not query:
+        raise ValueError("Search query cannot be empty.")
+    if not 1 <= top_k <= 20:
+        raise ValueError("top_k must be between 1 and 20.")
+
+    vector = _get_model().encode(query, normalize_embeddings=True).tolist()
+    response = _get_index().query(
+        vector=vector,
+        top_k=top_k,
+        include_metadata=True,
+    )
+
+    matches = getattr(response, "matches", None) or []
+    products = []
+    for match in matches:
+        metadata = getattr(match, "metadata", None) or {}
+        products.append({
+            "id": getattr(match, "id", None),
+            "score": float(getattr(match, "score", 0.0) or 0.0),
+            "description": metadata.get("description"),
+            "stock_code": metadata.get("stock_code"),
+            "unit_price": metadata.get("unit_price"),
+        })
+    return products
